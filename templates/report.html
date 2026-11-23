@@ -65,13 +65,16 @@
     <h2>Latest bills</h2>
     <div class="card">
       <table>
-        <tr><th>Bill</th><th>Date and time</th><th>Customer</th><th>Total</th></tr>        {% for s in recent %}
+        <tr><th>Bill</th><th>Date and time</th><th>Customer</th><th>Total</th></tr>
+        {% for s in recent %}
         <tr>
           <td>#{{ s['id'] }}</td>
-          <td>{{ s['customer'] or '-' }}</td>          <td>{{ '%.2f'|format(s['total']) }}</td>
+          <td>{{ s['created'] }}</td>
+          <td>{{ s['customer'] or '-' }}</td>
+          <td>{{ '%.2f'|format(s['total']) }}</td>
         </tr>
         {% else %}
-        <tr><td colspan="3" class="empty">No sales yet.</td></tr>
+        <tr><td colspan="4" class="empty">No sales yet.</td></tr>
         {% endfor %}
       </table>
     </div>
