@@ -1,4 +1,5 @@
 import os
+import re
 import sqlite3
 from datetime import date, datetime
 from flask import Flask, render_template, request, redirect, flash, jsonify
@@ -7,7 +8,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(BASE_DIR, "pharmacy.db")
 
 app = Flask(__name__)
-app.secret_key = "change-this-later"
+app.secret_key = os.environ.get("SECRET_KEY", "dev-only-key-change-me")
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS medicines (
@@ -80,15 +81,43 @@ def stock_in():
 
     if request.method == "POST":
         f = request.form
-        name = f["name"].strip()
-        strength = f["strength"].strip()
-        qty = int(f["qty"])
-        bonus = int(f["bonus"] or 0)
-        cost_box = float(f["cost_box"])
-        sale_box = float(f["sale_box"])
+        name = f.get("name", "").strip()
+        strength = f.get("strength", "").strip()
+        company = f.get("company", "").strip()
+        distributor = f.get("distributor", "").strip()
+        invoice_no = f.get("invoice_no", "").strip()
+        batch_no = f.get("batch_no", "").strip()
+        expiry = f.get("expiry", "").strip()
+
+        try:
+            qty = int(f.get("qty", 0))
+            bonus = int(f.get("bonus") or 0)
+            cost_box = float(f.get("cost_box", 0))
+            sale_box = float(f.get("sale_box", 0))
+            spb = int(f.get("strips_per_box") or 1)
+        except (TypeError, ValueError):
+            flash("Enter valid numbers for quantity, prices and strips per box.")
+            conn.close()
+            return redirect("/stock-in")
 
         if not name or qty <= 0:
             flash("Enter a medicine name and a quantity above 0.")
+            conn.close()
+            return redirect("/stock-in")
+        if bonus < 0 or spb <= 0:
+            flash("Bonus cannot be negative and strips per box must be above 0.")
+            conn.close()
+            return redirect("/stock-in")
+        if cost_box <= 0 or sale_box <= 0:
+            flash("Purchase and selling prices must be above 0.")
+            conn.close()
+            return redirect("/stock-in")
+        if not batch_no:
+            flash("Enter a batch number.")
+            conn.close()
+            return redirect("/stock-in")
+        if not re.fullmatch(r"\d{4}-\d{2}", expiry):
+            flash("Expiry must be in YYYY-MM format.")
             conn.close()
             return redirect("/stock-in")
 
@@ -99,11 +128,10 @@ def stock_in():
         ).fetchone()
 
         if med is None:
-            spb = int(f["strips_per_box"])
             cur = conn.execute(
                 """INSERT INTO medicines (name, strength, company, strips_per_box)
                    VALUES (?, ?, ?, ?)""",
-                (name, strength, f["company"].strip(), spb),
+                (name, strength, company, spb),
             )
             med_id = cur.lastrowid
         else:
@@ -118,8 +146,7 @@ def stock_in():
                (medicine_id, distributor, invoice_no, batch_no, expiry,
                 strips, cost_box, sale_box, received_on)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (med_id, f["distributor"].strip(), f["invoice_no"].strip(),
-             f["batch_no"].strip(), f["expiry"], total_boxes * spb,
+            (med_id, distributor, invoice_no, batch_no, expiry, total_boxes * spb,
              real_cost, sale_box, str(date.today())),
         )
         conn.commit()
@@ -205,10 +232,12 @@ def sale():
 
 @app.route("/sell", methods=["POST"])
 def sell():
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
+    if not isinstance(data, dict):
+        data = {}
     lines = data.get("lines", [])
     customer = (data.get("customer") or "").strip()
-    if not lines:
+    if not isinstance(lines, list) or not lines:
         return jsonify(error="The bill is empty."), 400
 
     conn = get_db()
@@ -216,14 +245,24 @@ def sell():
     items = []
     try:
         for ln in lines:
+            if not isinstance(ln, dict):
+                raise ValueError("Invalid sale line.")
             med = conn.execute(
-                "SELECT * FROM medicines WHERE id = ?", (ln["id"],)
+                "SELECT * FROM medicines WHERE id = ?", (ln.get("id"),)
             ).fetchone()
-            qty = int(ln["qty"])
+            if med is None:
+                raise ValueError("Unknown medicine in the bill.")
+            mode = ln.get("mode")
+            if mode not in ("box", "strip"):
+                raise ValueError("Invalid sale mode.")
+            try:
+                qty = int(ln.get("qty", 0))
+            except (TypeError, ValueError):
+                raise ValueError("Invalid quantity.")
             if qty <= 0:
                 raise ValueError("Quantity must be above 0.")
             spb = med["strips_per_box"]
-            need = qty * spb if ln["mode"] == "box" else qty
+            need = qty * spb if mode == "box" else qty
 
             # sell the batch that expires first
             batches = conn.execute(
@@ -243,7 +282,7 @@ def sell():
                     "UPDATE batches SET strips = strips - ? WHERE id = ?",
                     (take, b["id"]),
                 )
-                items.append((med["id"], b["id"], ln["mode"], take, price, cost))
+                items.append((med["id"], b["id"], mode, take, price, cost))
                 total += take * price
                 profit += take * (price - cost)
 
@@ -298,4 +337,4 @@ def report():
 
 if __name__ == "__main__":
     init_db()
-    app.run(debug=True)
+    app.run(debug=os.environ.get("FLASK_DEBUG") == "1")
