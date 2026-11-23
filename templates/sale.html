@@ -52,6 +52,7 @@
       <a href="/sale" class="active">Sale</a>
       <a href="/stock-in">Stock In</a>
       <a href="/stock">Stock</a>
+      <a href="/batches">Batches</a>
       <a href="/report">Report</a>
 
     </nav>
@@ -136,7 +137,7 @@
       if (!cart.length) { alert('The bill is empty.'); return; }
       const res = await fetch('/sell', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '{{ csrf_token() }}' },
         body: JSON.stringify({ lines: cart, customer: document.getElementById('customer').value })      });
       const data = await res.json();
       if (!res.ok) { alert(data.error); return; }

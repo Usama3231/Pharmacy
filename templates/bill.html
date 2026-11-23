@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bill #{{ sale.id }}</title>
+  <style>
+    body { margin: 0; background: #f1f6f4; color: #1d2b27;
+           font-family: "Segoe UI", system-ui, Arial, sans-serif; }
+    main { max-width: 640px; margin: 30px auto; padding: 0 14px; }
+    .card { background: #fff; border-radius: 14px; padding: 24px;
+            box-shadow: 0 2px 10px rgba(0,0,0,.06); }
+    h1 { margin: 0 0 4px; font-size: 22px; color: #0b7a58; }
+    .muted { color: #6b7d77; font-size: 13px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 18px; font-size: 14px; }
+    th { text-align: left; color: #6b7d77; font-size: 12px; text-transform: uppercase;
+         padding: 8px 6px; border-bottom: 2px solid #d8e4e0; }
+    td { padding: 9px 6px; border-bottom: 1px solid #d8e4e0; }
+    .grand { display: flex; justify-content: space-between; font-size: 20px;
+             font-weight: 700; margin-top: 18px; }
+    button { margin-top: 18px; padding: 12px 20px; border: none; border-radius: 9px;
+             background: #0f9d73; color: #fff; font-size: 15px; font-weight: 700; cursor: pointer; }
+    a { color: #0b7a58; }
+    @media print {
+      body { background: #fff; }
+      main { margin: 0; padding: 0; }
+      .card { box-shadow: none; }
+      button, .no-print { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="card">
+      <h1>Ushiri Pharmacy</h1>
+      <div class="muted">Bill #{{ sale.id }} &middot; {{ sale.created }}{% if sale.customer %} &middot; {{ sale.customer }}{% endif %}</div>
+      <table>
+        <tr><th>Medicine</th><th>Sold as</th><th>Strips</th><th>Price</th><th>Total</th></tr>
+        {% for i in items %}
+        <tr>
+          <td>{{ i.name }} {{ i.strength }}</td>
+          <td>{{ i.mode }}</td>
+          <td>{{ i.strips }}</td>
+          <td>{{ '%.2f'|format(i.price_strip) }}</td>
+          <td>{{ '%.2f'|format(i.strips * i.price_strip) }}</td>
+        </tr>
+        {% endfor %}
+      </table>
+      <div class="grand"><span>Total</span><span>{{ '%.2f'|format(sale.total) }}</span></div>
+      <button onclick="window.print()">Print bill</button>
+      <p class="no-print"><a href="/report">Back to report</a></p>
+    </div>
+  </main>
+</body>
+</html>

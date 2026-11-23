@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Batches</title>
+  <style>
+    :root { --green: #0f9d73; --green-dark: #0b7a58; --bg: #f1f6f4;
+            --card: #fff; --text: #1d2b27; --muted: #6b7d77; --border: #d8e4e0; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text);
+           font-family: "Segoe UI", system-ui, Arial, sans-serif; }
+    header { background: linear-gradient(135deg, var(--green), var(--green-dark));
+             color: #fff; padding: 22px 16px 30px; text-align: center; }
+    header h1 { margin: 0; font-size: 24px; }
+    nav { margin-top: 12px; }
+    nav a { color: #fff; text-decoration: none; padding: 7px 16px; margin: 0 4px;
+            border-radius: 20px; background: rgba(255,255,255,.18); font-size: 14px; }
+    nav a.active { background: #fff; color: var(--green-dark); font-weight: 700; }
+    main { max-width: 1000px; margin: -18px auto 40px; padding: 0 14px; }
+    .card { background: var(--card); border-radius: 14px; padding: 16px;
+            margin-bottom: 14px; box-shadow: 0 2px 10px rgba(0,0,0,.06); }
+    .msg { background: #dcf5ea; border-left: 5px solid var(--green); padding: 12px 16px;
+           border-radius: 10px; margin-bottom: 14px; font-weight: 600; }
+    .wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th { text-align: left; color: var(--muted); font-size: 12px; text-transform: uppercase;
+         padding: 8px 10px; border-bottom: 2px solid var(--border); }
+    td { padding: 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+    td small { color: var(--muted); }
+    .actions { display: flex; gap: 8px; align-items: center; }
+    .edit { padding: 6px 12px; border-radius: 8px; background: #dcf5ea;
+            color: var(--green-dark); text-decoration: none; font-weight: 700; }
+    button { cursor: pointer; border: none; border-radius: 8px; padding: 6px 12px;
+             background: #fde2e2; color: #b42318; font-weight: 700; }
+    .empty { text-align: center; color: var(--muted); padding: 20px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Ushiri Pharmacy</h1>
+    <nav>
+      <a href="/sale">Sale</a>
+      <a href="/stock-in">Stock In</a>
+      <a href="/stock">Stock</a>
+      <a href="/batches" class="active">Batches</a>
+      <a href="/report">Report</a>
+    </nav>
+  </header>
+
+  <main>
+    {% for m in get_flashed_messages() %}
+      <div class="msg">{{ m }}</div>
+    {% endfor %}
+    <div class="card">
+      <div class="wrap">
+        <table>
+          <tr><th>Medicine</th><th>Batch</th><th>Expiry</th><th>Strips</th><th>Cost / Sale</th><th>Received</th><th></th></tr>
+          {% for b in batches %}
+          <tr>
+            <td><b>{{ b.name }}</b> <small>{{ b.strength }}</small></td>
+            <td>{{ b.batch_no }}</td>
+            <td>{{ b.expiry }}</td>
+            <td>{{ b.strips }}</td>
+            <td>{{ '%.2f'|format(b.cost_box) }} / {{ '%.2f'|format(b.sale_box) }}</td>
+            <td>{{ b.received_on }}</td>
+            <td>
+              <div class="actions">
+                <a class="edit" href="/batches/{{ b.id }}/edit">Edit</a>
+                <form method="post" action="/batches/{{ b.id }}/delete">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button type="submit">Delete</button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="7" class="empty">No batches yet. Add stock from Stock In.</td></tr>
+          {% endfor %}
+        </table>
+      </div>
+    </div>
+  </main>
+</body>
+</html>

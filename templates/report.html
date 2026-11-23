@@ -44,6 +44,7 @@
       <a href="/sale">Sale</a>
       <a href="/stock-in">Stock In</a>
       <a href="/stock">Stock</a>
+      <a href="/batches">Batches</a>
       <a href="/report" class="active">Report</a>
     </nav>
   </header>
@@ -68,7 +69,7 @@
         <tr><th>Bill</th><th>Date and time</th><th>Customer</th><th>Total</th></tr>
         {% for s in recent %}
         <tr>
-          <td>#{{ s['id'] }}</td>
+          <td><a href="/bill/{{ s['id'] }}">#{{ s['id'] }}</a></td>
           <td>{{ s['created'] }}</td>
           <td>{{ s['customer'] or '-' }}</td>
           <td>{{ '%.2f'|format(s['total']) }}</td>
